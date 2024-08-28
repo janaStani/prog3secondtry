@@ -1,9 +1,9 @@
 import mpi.*;
 import java.io.*;
-import java.util.*;
+import java.util.Arrays;
 
 public class Main {
-    private static final int GRID_SIZE = 27;  // Size of the grid
+    private static final int GRID_SIZE = 28;  // Updated grid size (28x28)
     private static final int MAX_DEPTH = 3;   // Recursion depth
 
     public static void main(String[] args) {
@@ -13,32 +13,38 @@ public class Main {
             int rank = MPI.COMM_WORLD.Rank();
             int size = MPI.COMM_WORLD.Size();
 
-            // Define the grid size and depth
             int initialSize = GRID_SIZE;
             int recursionDepth = MAX_DEPTH;
 
             // Initialize the grid
             int[] data = new int[initialSize * initialSize];
+
             if (rank == 0) {
                 Arrays.fill(data, 0);  // Start with all cells as '0'
             }
 
-            // Broadcast the size and recursion depth
+            // Broadcast grid size and recursion depth
             MPI.COMM_WORLD.Bcast(new int[]{initialSize}, 0, 1, MPI.INT, 0);
             MPI.COMM_WORLD.Bcast(new int[]{recursionDepth}, 0, 1, MPI.INT, 0);
 
-            // Broadcast the initial grid data
-            MPI.COMM_WORLD.Bcast(data, 0, data.length, MPI.INT, 0);
+            // Calculate the range of rows for this process
+            int rowsPerProcess = (initialSize + size - 1) / size;
+            int startRow = rank * rowsPerProcess;
+            int endRow = Math.min(startRow + rowsPerProcess, initialSize);
 
-            // Compute the fractal
-            computeFractal(data, 0, 0, initialSize, recursionDepth, rank, size);
+            // Compute fractal for the assigned rows
+            computeFractal(data, 0, 0, initialSize, recursionDepth, startRow, endRow);
 
-            // Gather the results to the root process
+            // Gather all parts to the root process
+            int[] globalData = new int[initialSize * initialSize];
+            MPI.COMM_WORLD.Gather(data, startRow * initialSize, rowsPerProcess * initialSize, MPI.INT, globalData, startRow * initialSize, rowsPerProcess * initialSize, MPI.INT, 0);
+
+            // Only rank 0 writes the result to the file
             if (rank == 0) {
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
                     for (int i = 0; i < initialSize; i++) {
                         for (int j = 0; j < initialSize; j++) {
-                            writer.write(data[i * initialSize + j] + " ");
+                            writer.write(globalData[i * initialSize + j] + " ");
                         }
                         writer.newLine();
                     }
@@ -51,23 +57,16 @@ public class Main {
         }
     }
 
-    private static void computeFractal(int[] data, int x, int y, int size, int depth, int rank, int numProcesses) {
+    private static void computeFractal(int[] data, int x, int y, int size, int depth, int startRow, int endRow) {
         if (depth == 0) {
             return;
         }
 
         int newSize = size / 3;
-        if (size <= 1) return;
 
-        // Calculate the range of rows for this process
-        int startRow = (rank * size) / numProcesses;
-        int endRow = ((rank + 1) * size) / numProcesses;
-
-        // Perform computation
         for (int i = startRow; i < endRow; i++) {
             for (int j = 0; j < size; j++) {
-                // Check if the current position is part of the Sierpiński pattern
-                if (isInFractal(i - y, j - x, size)) {
+                if (isInFractal(i, j, size)) {
                     data[i * size + j] = 1;
                 } else {
                     data[i * size + j] = 0;
@@ -75,24 +74,20 @@ public class Main {
             }
         }
 
-        // Recursively apply the fractal pattern
-        if (size > 1) {
+        if (newSize > 0) {
             int newDepth = depth - 1;
-            int subSize = size / 3;
-
-            for (int i = 0; i < 9; i++) {
-                int subX = x + (i % 3) * subSize;
-                int subY = y + (i / 3) * subSize;
-
-                if (i != 4) {  // Skip the center square
-                    computeFractal(data, subX, subY, subSize, newDepth, rank, numProcesses);
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (i == 1 && j == 1) {
+                        continue; // Skip the center square
+                    }
+                    computeFractal(data, x + i * newSize, y + j * newSize, newSize, newDepth, startRow, endRow);
                 }
             }
         }
     }
 
     private static boolean isInFractal(int x, int y, int size) {
-        // Check if the position (x, y) is within the fractal pattern
         while (size > 0) {
             if ((x % 3 == 1) && (y % 3 == 1)) {
                 return false;

@@ -14,6 +14,7 @@ public class SimpleGUI extends Application {
     private static final int WINDOW_WIDTH = 800;
     private static final int WINDOW_HEIGHT = 600;
     private static final int CARPET_SIZE = 500;  // Desired size of the fractal
+    private static final int GRID_SIZE = 27;     // Grid size (27x27)
 
     @Override
     public void start(Stage primaryStage) {
@@ -23,17 +24,16 @@ public class SimpleGUI extends Application {
         root.getChildren().add(canvas);
 
         // Center the fractal
-        double scale = CARPET_SIZE / (double) 27;  // Fractal grid size
+        double scale = CARPET_SIZE / (double) GRID_SIZE;  // Fractal grid size
         double offsetX = (WINDOW_WIDTH - CARPET_SIZE) / 2.0;
         double offsetY = (WINDOW_HEIGHT - CARPET_SIZE) / 2.0;
 
         // Read and render the fractal
         try (BufferedReader br = new BufferedReader(new FileReader("result.txt"))) {
             String line;
-            int fractalSize = 27;  // The size of the fractal grid
             int y = 0;
             while ((line = br.readLine()) != null) {
-                String[] values = line.split(" ");
+                String[] values = line.trim().split(" ");
                 for (int x = 0; x < values.length; x++) {
                     if (values[x].equals("1")) {
                         gc.fillRect(offsetX + x * scale, offsetY + y * scale, scale, scale);
