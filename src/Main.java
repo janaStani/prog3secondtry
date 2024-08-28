@@ -20,7 +20,7 @@ public class Main {
             // Initialize the grid
             int[] data = new int[initialSize * initialSize];
             if (rank == 0) {
-                Arrays.fill(data, 1);  // Start with all cells as '1'
+                Arrays.fill(data, 0);  // Start with all cells as '0'
             }
 
             // Broadcast the size and recursion depth
@@ -66,7 +66,12 @@ public class Main {
         // Perform computation
         for (int i = startRow; i < endRow; i++) {
             for (int j = 0; j < size; j++) {
-                data[i * size + j] = 1;
+                // Check if the current position is part of the Sierpiński pattern
+                if (isInFractal(i - y, j - x, size)) {
+                    data[i * size + j] = 1;
+                } else {
+                    data[i * size + j] = 0;
+                }
             }
         }
 
@@ -84,5 +89,18 @@ public class Main {
                 }
             }
         }
+    }
+
+    private static boolean isInFractal(int x, int y, int size) {
+        // Check if the position (x, y) is within the fractal pattern
+        while (size > 0) {
+            if ((x % 3 == 1) && (y % 3 == 1)) {
+                return false;
+            }
+            x /= 3;
+            y /= 3;
+            size /= 3;
+        }
+        return true;
     }
 }
