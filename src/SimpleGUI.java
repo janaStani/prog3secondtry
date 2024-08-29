@@ -14,7 +14,7 @@ public class SimpleGUI extends Application {
     private static final int WINDOW_WIDTH = 800;
     private static final int WINDOW_HEIGHT = 600;
     private static final int CARPET_SIZE = 500;  // Desired size of the fractal
-    private static final int GRID_SIZE = 27;     // Grid size (27x27)
+    private static final int GRID_SIZE = 3;
 
     @Override
     public void start(Stage primaryStage) {
