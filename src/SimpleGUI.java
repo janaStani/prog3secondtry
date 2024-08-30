@@ -14,7 +14,6 @@ public class SimpleGUI extends Application {
     private static final int WINDOW_WIDTH = 800;
     private static final int WINDOW_HEIGHT = 600;
     private static final int CARPET_SIZE = 500;  // Desired size of the fractal
-    private static final int GRID_SIZE = 3;
 
     @Override
     public void start(Stage primaryStage) {
@@ -23,8 +22,20 @@ public class SimpleGUI extends Application {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         root.getChildren().add(canvas);
 
+        int gridSize = 0;
+
+        // Read the fractal data to determine the grid size
+        try (BufferedReader br = new BufferedReader(new FileReader("result.txt"))) {
+            String line = br.readLine();
+            if (line != null) {
+                gridSize = line.trim().split(" ").length;  // Get grid size from the first line
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // Center the fractal
-        double scale = CARPET_SIZE / (double) GRID_SIZE;  // Fractal grid size
+        double scale = CARPET_SIZE / (double) gridSize;
         double offsetX = (WINDOW_WIDTH - CARPET_SIZE) / 2.0;
         double offsetY = (WINDOW_HEIGHT - CARPET_SIZE) / 2.0;
 
@@ -46,7 +57,7 @@ public class SimpleGUI extends Application {
         }
 
         primaryStage.setScene(new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT));
-        primaryStage.setTitle("Sierpiński Carpet");
+        primaryStage.setTitle("Sierpinski Carpet");
         primaryStage.show();
     }
 
