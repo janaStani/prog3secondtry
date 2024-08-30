@@ -2,29 +2,39 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
+import javafx.scene.control.ToolBar;
+import javafx.scene.Cursor;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.transform.Scale;
+import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
 public class SimpleGUI extends Application {
 
-    private static final int WINDOW_WIDTH = 800;
-    private static final int WINDOW_HEIGHT = 600;
-    private static final int CARPET_SIZE = 500;  // Desired size of the fractal
+    public static final int WINDOW_WIDTH = 800;
+    public static final int WINDOW_HEIGHT = 600;
+    public static final int CARPET_SIZE = 500;  // Desired size of the fractal
+
+    private final Scale scaleTransform = new Scale(1, 1, 0, 0);  // initialize scale with default values, no scaling
+    private final Translate translateTransform = new Translate(0, 0);  // initialize translate with default values, no moving
+    private ViewController viewController;  // Declare viewController
 
     @Override
     public void start(Stage primaryStage) {
-        StackPane root = new StackPane();
+        // Create the drawing Pane for fractal (Canvas)
         Canvas canvas = new Canvas(WINDOW_WIDTH, WINDOW_HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
-        root.getChildren().add(canvas);
 
-        int gridSize = 0;
+        // Apply transformations to the canvas
+        canvas.getTransforms().addAll(scaleTransform, translateTransform);
 
         // Read the fractal data to determine the grid size
+        int gridSize = 0;
         try (BufferedReader br = new BufferedReader(new FileReader("result.txt"))) {
             String line = br.readLine();
             if (line != null) {
@@ -56,7 +66,37 @@ public class SimpleGUI extends Application {
             e.printStackTrace();
         }
 
-        primaryStage.setScene(new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT));
+        // Create the toolbar with zoom and reset buttons
+        ToolBar toolBar = new ToolBar();
+        Button zoomInButton = new Button("Zoom In");
+        Button zoomOutButton = new Button("Zoom Out");
+        Button resetButton = new Button("Reset View");
+
+        // Initialize ViewController with the scale and translate transformations
+        viewController = new ViewController(scaleTransform, translateTransform);
+
+        // Set actions for buttons
+        zoomInButton.setOnAction(e -> viewController.zoom(1.2)); // zoom in by factor 1.2
+        zoomOutButton.setOnAction(e -> viewController.zoom(0.8)); // zoom out by factor 0.8
+        resetButton.setOnAction(e -> viewController.resetView(WINDOW_WIDTH, WINDOW_HEIGHT)); // reset view
+
+        toolBar.getItems().addAll(zoomInButton, zoomOutButton, resetButton); // add buttons to toolbar
+
+        // Arrange components using BorderPane for the toolbar and StackPane for overall layout
+        BorderPane borderPane = new BorderPane();
+        borderPane.setTop(toolBar);  // place toolbar at the top
+
+        StackPane stackPane = new StackPane();
+        stackPane.getChildren().addAll(canvas, borderPane); // Canvas at the bottom, BorderPane on top
+
+        Scene scene = new Scene(stackPane, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+        // Enable mouse dragging for panning
+        scene.setOnMousePressed(viewController::startDrag);  // handle mouse press event
+        scene.setOnMouseReleased(e -> scene.setCursor(Cursor.DEFAULT));  // handle mouse release event
+        scene.setOnMouseDragged(viewController::drag);  // handle mouse drag event
+
+        primaryStage.setScene(scene);
         primaryStage.setTitle("Sierpinski Carpet");
         primaryStage.show();
     }
