@@ -29,12 +29,13 @@ public class Parallel {
         System.out.println("Starting parallel computation with depth: " + recursionDepth);
 
         // Compute fractal in parallel
-        long startTime = System.currentTimeMillis();
-        ForkJoinPool pool = new ForkJoinPool();
-        pool.invoke(new FractalTask(data, 0, 0, gridSize, recursionDepth));
-        long endTime = System.currentTimeMillis();
+        try (ForkJoinPool pool = new ForkJoinPool()) {
+            long startTime = System.currentTimeMillis();
+            pool.invoke(new FractalTask(data, 0, 0, gridSize, recursionDepth));
+            long endTime = System.currentTimeMillis();
 
-        System.out.println("Parallel computation completed in " + (endTime - startTime) + " milliseconds.");
+            System.out.println("Parallel computation completed in " + (endTime - startTime) + " milliseconds.");
+        }
 
         // Write result to file
         writeToFile(data, gridSize);
@@ -92,40 +93,6 @@ public class Parallel {
     }
 
 
-    private static void computeFractal(int[] data, int x, int y, int size, int depth) {
-        System.out.println("Computing on thread: " + Thread.currentThread().getName());
-        if (depth == 0) {
-            return;
-        }
-
-        int newSize = size / 3;
-
-        // Fill the area for the current level of recursion
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (isInFractal(x + i, y + j, size)) {
-                    data[(y + i) * size + (x + j)] = 1;
-                } else {
-                    data[(y + i) * size + (x + j)] = 0;
-                }
-            }
-        }
-
-        // Recursively compute the non-center blocks
-        if (newSize > 0) {
-            int newDepth = depth - 1;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (i == 1 && j == 1) {
-                        continue;  // Skip the center block
-                    }
-                    computeFractal(data, x + i * newSize, y + j * newSize, newSize, newDepth);
-                }
-            }
-        }
-    }
-
-
     private static boolean isInFractal(int x, int y, int size) {
         while (size > 0) {
             if ((x % 3 == 1) && (y % 3 == 1)) {
@@ -137,6 +104,7 @@ public class Parallel {
         }
         return true;
     }
+
 
     private static void writeToFile(int[] data, int gridSize) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
@@ -150,4 +118,5 @@ public class Parallel {
             e.printStackTrace();
         }
     }
+
 }
