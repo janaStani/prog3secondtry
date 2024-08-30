@@ -1,11 +1,12 @@
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.ForkJoinPool;
 
 public class Parallel {
-    private static final int DEFAULT_RECURSION_DEPTH = 2;  // Default depth
+    private static final int DEFAULT_RECURSION_DEPTH = 4;  // Default depth
+    private static final ForkJoinPool pool = new ForkJoinPool();  // ForkJoinPool for parallel tasks
 
     public static void main(String[] args) {
         // Set default recursion depth
@@ -28,24 +29,24 @@ public class Parallel {
 
         System.out.println("Starting parallel computation with depth: " + recursionDepth);
 
-        // Compute fractal in parallel
-        try (ForkJoinPool pool = new ForkJoinPool()) {
-            long startTime = System.currentTimeMillis();
-            pool.invoke(new FractalTask(data, 0, 0, gridSize, recursionDepth));
-            long endTime = System.currentTimeMillis();
+        // Compute fractal
+        long startTime = System.nanoTime();
+        pool.invoke(new ComputeTask(data, 0, 0, gridSize, recursionDepth));
+        long endTime = System.nanoTime();
 
-            System.out.println("Parallel computation completed in " + (endTime - startTime) + " milliseconds.");
-        }
+        // Calculate elapsed time in milliseconds with three decimal places
+        double elapsedTime = (endTime - startTime) / 1_000_000.0;
+        System.out.printf("Parallel computation completed in %.3f milliseconds.%n", elapsedTime);
 
         // Write result to file
         writeToFile(data, gridSize);
     }
 
-    private static class FractalTask extends RecursiveAction {
+    private static class ComputeTask extends RecursiveAction {
         private final int[] data;
         private final int x, y, size, depth;
 
-        FractalTask(int[] data, int x, int y, int size, int depth) {
+        ComputeTask(int[] data, int x, int y, int size, int depth) {
             this.data = data;
             this.x = x;
             this.y = y;
@@ -61,37 +62,38 @@ public class Parallel {
 
             int newSize = size / 3;
 
-            // Fill the area for the current level of recursion
+            // Ensure that the x and y indices are within the grid bounds
+            if (x < 0 || y < 0 || x + size > (int) Math.pow(3, depth) || y + size > (int) Math.pow(3, depth)) {
+                return;
+            }
+
+            // Set the fractal pattern
             for (int i = 0; i < size; i++) {
                 for (int j = 0; j < size; j++) {
-                    if (isInFractal(x + i, y + j, size)) {
-                        data[(y + i) * size + (x + j)] = 1;
+                    if (isInFractal(i, j, size)) {
+                        data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 1;
                     } else {
-                        data[(y + i) * size + (x + j)] = 0;
+                        data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 0;
                     }
                 }
             }
 
-            // Create and invoke child tasks
             if (newSize > 0) {
                 int newDepth = depth - 1;
-                FractalTask[] tasks = new FractalTask[8];
-                int index = 0;
-
+                ComputeTask[] tasks = new ComputeTask[8];
+                int taskIndex = 0;
                 for (int i = 0; i < 3; i++) {
                     for (int j = 0; j < 3; j++) {
                         if (i == 1 && j == 1) {
                             continue;  // Skip the center block
                         }
-                        tasks[index++] = new FractalTask(data, x + i * newSize, y + j * newSize, newSize, newDepth);
+                        tasks[taskIndex++] = new ComputeTask(data, x + i * newSize, y + j * newSize, newSize, newDepth);
                     }
                 }
-
-                invokeAll(tasks);  // Execute all tasks in parallel
+                invokeAll(tasks);
             }
         }
     }
-
 
     private static boolean isInFractal(int x, int y, int size) {
         while (size > 0) {
@@ -105,7 +107,6 @@ public class Parallel {
         return true;
     }
 
-
     private static void writeToFile(int[] data, int gridSize) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
             for (int i = 0; i < gridSize; i++) {
@@ -118,5 +119,5 @@ public class Parallel {
             e.printStackTrace();
         }
     }
-
 }
+

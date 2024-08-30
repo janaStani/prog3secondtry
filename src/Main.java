@@ -5,8 +5,8 @@ import java.util.Arrays;
 public class Main {
 
     // Default grid size and recursion depth
-    private static final int DEFAULT_GRID_SIZE = 9;  // 3^2 for depth 2
-    private static final int DEFAULT_RECURSION_DEPTH = 2;
+    private static final int DEFAULT_GRID_SIZE = 81;  // 3^2 for depth 2
+    private static final int DEFAULT_RECURSION_DEPTH = 4;
 
     public static void main(String[] args) {
         try {
@@ -22,7 +22,7 @@ public class Main {
                 try {
                     recursionDepth = Integer.parseInt(args[args.length - 1]);
                     if (rank == 0) {
-                        System.out.println("Recursion Depth set to: " + recursionDepth);
+                        System.out.println("Starting distributed computation with depth: " + recursionDepth);
                     }
                 } catch (NumberFormatException e) {
                     if (rank == 0) {
@@ -54,8 +54,17 @@ public class Main {
             int startRow = rank * rowsPerProcess;  // Each process starts from a different row
             int endRow = Math.min(startRow + rowsPerProcess, gridSize);  // Calculate end row
 
+            long startTime = System.nanoTime();  // Start time
             // Compute the fractal for each process
             computeFractal(data, 0, 0, gridSize, recursionDepth, startRow, endRow);
+            long endTime = System.nanoTime();    // End time
+
+            double elapsedTime = (endTime - startTime) / 1_000_000.0;
+
+            if (rank == 0) {
+                System.out.printf("Sequential computation completed in %.3f milliseconds.%n", elapsedTime);
+            }
+
 
             // Array in the root process to store the complete grid data after gathering from all processes
             int[] globalData = new int[gridSize * gridSize];

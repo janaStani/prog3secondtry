@@ -3,7 +3,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class Sequential {
-    private static final int DEFAULT_RECURSION_DEPTH = 2;  // Default depth
+    private static final int DEFAULT_RECURSION_DEPTH = 4;  // Default depth
 
     public static void main(String[] args) {
         // Set default recursion depth
@@ -27,30 +27,38 @@ public class Sequential {
         System.out.println("Starting sequential computation with depth: " + recursionDepth);
 
         // Compute fractal
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         computeFractal(data, 0, 0, gridSize, recursionDepth);
-        long endTime = System.currentTimeMillis();
+        long endTime = System.nanoTime();
 
-        System.out.println("Sequential computation completed in " + (endTime - startTime) + " milliseconds.");
+        // Calculate elapsed time in milliseconds with three decimal places
+        double elapsedTime = (endTime - startTime) / 1_000_000.0;
+        System.out.printf("Sequential computation completed in %.3f milliseconds.%n", elapsedTime);
 
         // Write result to file
         writeToFile(data, gridSize);
     }
 
+
     private static void computeFractal(int[] data, int x, int y, int size, int depth) {
-        System.out.println("Computing on thread: " + Thread.currentThread().getName());
         if (depth == 0) {
             return;
         }
 
         int newSize = size / 3;
 
+        // Ensure that the x and y indices are within the grid bounds
+        if (x < 0 || y < 0 || x + size > (int) Math.pow(3, depth) || y + size > (int) Math.pow(3, depth)) {
+            return;
+        }
+
+        // Set the fractal pattern
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 if (isInFractal(i, j, size)) {
-                    data[(y + i) * size + (x + j)] = 1;
+                    data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 1;
                 } else {
-                    data[(y + i) * size + (x + j)] = 0;
+                    data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 0;
                 }
             }
         }
@@ -67,6 +75,7 @@ public class Sequential {
             }
         }
     }
+
 
     private static boolean isInFractal(int x, int y, int size) {
         while (size > 0) {

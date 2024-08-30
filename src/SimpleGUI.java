@@ -18,16 +18,17 @@ public class SimpleGUI extends Application {
 
     public static final int WINDOW_WIDTH = 800;
     public static final int WINDOW_HEIGHT = 600;
-    public static final int CARPET_SIZE = 500;  // Desired size of the fractal
+    public static final int CANVAS_SIZE = 4000;  // Increased canvas size for higher resolution
+    public static final int DISPLAY_SIZE = 500;  // Display size remains the same
 
-    private final Scale scaleTransform = new Scale(1, 1, 0, 0);  // initialize scale with default values, no scaling
-    private final Translate translateTransform = new Translate(0, 0);  // initialize translate with default values, no moving
-    private ViewController viewController;  // Declare viewController
+    private final Scale scaleTransform = new Scale(1, 1, 0, 0);
+    private final Translate translateTransform = new Translate(0, 0);
+    private ViewController viewController;
 
     @Override
     public void start(Stage primaryStage) {
         // Create the drawing Pane for fractal (Canvas)
-        Canvas canvas = new Canvas(WINDOW_WIDTH, WINDOW_HEIGHT);
+        Canvas canvas = new Canvas(DISPLAY_SIZE, DISPLAY_SIZE); // Display size canvas
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         // Apply transformations to the canvas
@@ -44,12 +45,19 @@ public class SimpleGUI extends Application {
             e.printStackTrace();
         }
 
-        // Center the fractal
-        double scale = CARPET_SIZE / (double) gridSize;
-        double offsetX = (WINDOW_WIDTH - CARPET_SIZE) / 2.0;
-        double offsetY = (WINDOW_HEIGHT - CARPET_SIZE) / 2.0;
+        // Calculate the correct scale factor to fit the fractal within the desired display size
+        double scale = (double) CANVAS_SIZE / gridSize;  // Scale to fill larger canvas
 
-        // Read and render the fractal
+        // Compute offsets to center the fractal within the display area
+        double offsetX = (CANVAS_SIZE - gridSize * scale) / 2.0;  // Centering offset for X
+        double offsetY = (CANVAS_SIZE - gridSize * scale) / 2.0;  // Centering offset for Y
+
+        // Scale to fit within the display size
+        double displayScale = (double) DISPLAY_SIZE / CANVAS_SIZE;
+
+        // Render the fractal on the larger virtual canvas size
+        gc.save();  // Save the current state of the GraphicsContext
+        gc.scale(displayScale, displayScale);  // Scale down to fit the display size
         try (BufferedReader br = new BufferedReader(new FileReader("result.txt"))) {
             String line;
             int y = 0;
@@ -57,6 +65,7 @@ public class SimpleGUI extends Application {
                 String[] values = line.trim().split(" ");
                 for (int x = 0; x < values.length; x++) {
                     if (values[x].equals("1")) {
+                        // Draw each rectangle at the scaled position on the virtual canvas
                         gc.fillRect(offsetX + x * scale, offsetY + y * scale, scale, scale);
                     }
                 }
@@ -65,6 +74,7 @@ public class SimpleGUI extends Application {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        gc.restore();  // Restore the GraphicsContext to remove scaling after drawing
 
         // Create the toolbar with zoom and reset buttons
         ToolBar toolBar = new ToolBar();
