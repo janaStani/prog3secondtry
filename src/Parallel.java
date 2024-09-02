@@ -6,6 +6,7 @@ import java.util.concurrent.ForkJoinPool;
 
 public class Parallel {
     private static final int DEFAULT_RECURSION_DEPTH = 4;  // Default depth
+    private static final int MAX_SAFE_GRID_SIZE = 46340;   // Approximate square root of Integer.MAX_VALUE for grid size
     private static final ForkJoinPool pool = new ForkJoinPool();  // ForkJoinPool for parallel tasks
 
     public static void main(String[] args) {
@@ -24,14 +25,27 @@ public class Parallel {
         }
 
         // Calculate grid size based on recursion depth
-        int gridSize = (int) Math.pow(3, recursionDepth);
-        int[] data = new int[gridSize * gridSize];
+        long gridSize = (long) Math.pow(3, recursionDepth);
+
+        // Check for overflow and adjust recursion depth if needed
+        while (gridSize > MAX_SAFE_GRID_SIZE) {
+            System.err.println("Grid size too large (" + gridSize + "), reducing recursion depth...");
+            recursionDepth--;
+            gridSize = (long) Math.pow(3, recursionDepth);
+        }
+
+        // Now gridSize is safe to cast to int
+        int safeGridSize = (int) gridSize;
+        int[] data = new int[safeGridSize * safeGridSize];
 
         System.out.println("Starting parallel computation with depth: " + recursionDepth);
 
+        // Print the number of threads in the ForkJoinPool
+        System.out.println("Number of threads in ForkJoinPool: " + pool.getParallelism());
+
         // Compute fractal
         long startTime = System.nanoTime();
-        pool.invoke(new ComputeTask(data, 0, 0, gridSize, recursionDepth));
+        pool.invoke(new ComputeTask(data, 0, 0, safeGridSize, recursionDepth));
         long endTime = System.nanoTime();
 
         // Calculate elapsed time in milliseconds with three decimal places
@@ -39,7 +53,7 @@ public class Parallel {
         System.out.printf("Parallel computation completed in %.3f milliseconds.%n", elapsedTime);
 
         // Write result to file
-        writeToFile(data, gridSize);
+        writeToFile(data, safeGridSize);
     }
 
     private static class ComputeTask extends RecursiveAction {
@@ -120,4 +134,3 @@ public class Parallel {
         }
     }
 }
-

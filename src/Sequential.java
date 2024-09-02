@@ -4,6 +4,7 @@ import java.io.IOException;
 
 public class Sequential {
     private static final int DEFAULT_RECURSION_DEPTH = 4;  // Default depth
+    private static final int MAX_RECURSION_DEPTH = 10;     // Example limit to prevent overflow
 
     public static void main(String[] args) {
         // Set default recursion depth
@@ -13,6 +14,10 @@ public class Sequential {
         if (args.length > 0) {
             try {
                 recursionDepth = Integer.parseInt(args[0]);  // Read recursion depth from the first argument
+                if (recursionDepth > MAX_RECURSION_DEPTH) {
+                    System.err.println("Recursion depth is too large. Using maximum value of " + MAX_RECURSION_DEPTH + ".");
+                    recursionDepth = MAX_RECURSION_DEPTH;
+                }
             } catch (NumberFormatException e) {
                 System.err.println("Invalid recursion depth. Using default value of " + DEFAULT_RECURSION_DEPTH + ".");
             }
@@ -21,14 +26,23 @@ public class Sequential {
         }
 
         // Calculate grid size based on recursion depth
-        int gridSize = (int) Math.pow(3, recursionDepth);
-        int[] data = new int[gridSize * gridSize];
+        long gridSize = (long) Math.pow(3, recursionDepth);
 
+        // Check if grid size exceeds the maximum array size in Java
+        if (gridSize * gridSize > Integer.MAX_VALUE) {
+            System.err.println("Grid size is too large for Java array limits. Aborting computation.");
+            return;
+        }
+
+        int[] data = new int[(int) (gridSize * gridSize)];  // Safe cast after checking limits
+
+        Thread currentThread = Thread.currentThread();
         System.out.println("Starting sequential computation with depth: " + recursionDepth);
+        System.out.printf("Running on thread: %s (ID: %d)%n", currentThread.getName(), currentThread.threadId());
 
         // Compute fractal
         long startTime = System.nanoTime();
-        computeFractal(data, 0, 0, gridSize, recursionDepth);
+        computeFractal(data, 0, 0, (int) gridSize, recursionDepth);
         long endTime = System.nanoTime();
 
         // Calculate elapsed time in milliseconds with three decimal places
@@ -36,9 +50,8 @@ public class Sequential {
         System.out.printf("Sequential computation completed in %.3f milliseconds.%n", elapsedTime);
 
         // Write result to file
-        writeToFile(data, gridSize);
+        writeToFile(data, (int) gridSize);
     }
-
 
     private static void computeFractal(int[] data, int x, int y, int size, int depth) {
         if (depth == 0) {
@@ -75,7 +88,6 @@ public class Sequential {
             }
         }
     }
-
 
     private static boolean isInFractal(int x, int y, int size) {
         while (size > 0) {

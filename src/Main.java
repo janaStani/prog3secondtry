@@ -23,6 +23,7 @@ public class Main {
                     recursionDepth = Integer.parseInt(args[args.length - 1]);
                     if (rank == 0) {
                         System.out.println("Starting distributed computation with depth: " + recursionDepth);
+                        System.out.println("Total number of processes: " + size);
                     }
                 } catch (NumberFormatException e) {
                     if (rank == 0) {
@@ -62,7 +63,7 @@ public class Main {
             double elapsedTime = (endTime - startTime) / 1_000_000.0;
 
             if (rank == 0) {
-                System.out.printf("Sequential computation completed in %.3f milliseconds.%n", elapsedTime);
+                System.out.printf("Distributed computation completed in %.3f milliseconds.%n", elapsedTime);
             }
 
 
