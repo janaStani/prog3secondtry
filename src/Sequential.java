@@ -3,17 +3,17 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class Sequential {
-    private static final int DEFAULT_RECURSION_DEPTH = 4;  // Default depth
-    private static final int MAX_RECURSION_DEPTH = 10;     // Example limit to prevent overflow
+    private static final int DEFAULT_RECURSION_DEPTH = 4;  // default depth
+    private static final int MAX_RECURSION_DEPTH = 10;     // recursion limit
 
     public static void main(String[] args) {
-        // Set default recursion depth
+        // set default recursion depth
         int recursionDepth = DEFAULT_RECURSION_DEPTH;
 
-        // Check if argument for depth is provided
+        // command line argument handling for the recursion depth
         if (args.length > 0) {
             try {
-                recursionDepth = Integer.parseInt(args[0]);  // Read recursion depth from the first argument
+                recursionDepth = Integer.parseInt(args[0]);
                 if (recursionDepth > MAX_RECURSION_DEPTH) {
                     System.err.println("Recursion depth is too large. Using maximum value of " + MAX_RECURSION_DEPTH + ".");
                     recursionDepth = MAX_RECURSION_DEPTH;
@@ -25,66 +25,63 @@ public class Sequential {
             System.out.println("No recursion depth argument provided. Using default value of " + DEFAULT_RECURSION_DEPTH + ".");
         }
 
-        // Calculate grid size based on recursion depth
-        long gridSize = (long) Math.pow(3, recursionDepth);
+        long gridSize = (long) Math.pow(3, recursionDepth);  // calc grid based on rec
 
-        // Check if grid size exceeds the maximum array size in Java
-        if (gridSize * gridSize > Integer.MAX_VALUE) {
-            System.err.println("Grid size is too large for Java array limits. Aborting computation.");
-            return;
-        }
-
-        int[] data = new int[(int) (gridSize * gridSize)];  // Safe cast after checking limits
+        int[] data = new int[(int) (gridSize * gridSize)];  // array to store fractal data
 
         Thread currentThread = Thread.currentThread();
-        System.out.println("Starting sequential computation with depth: " + recursionDepth);
         System.out.printf("Running on thread: %s (ID: %d)%n", currentThread.getName(), currentThread.threadId());
+        System.out.println("Starting sequential computation with depth: " + recursionDepth);
 
-        // Compute fractal
+        // track computation time for the fractal
         long startTime = System.nanoTime();
+
+        // start from (0, 0), size of current grid, and depth of recursion
         computeFractal(data, 0, 0, (int) gridSize, recursionDepth);
+
         long endTime = System.nanoTime();
 
-        // Calculate elapsed time in milliseconds with three decimal places
+        // calculate time in ms with three decimal places
         double elapsedTime = (endTime - startTime) / 1_000_000.0;
         System.out.printf("Sequential computation completed in %.3f milliseconds.%n", elapsedTime);
 
-        // Write result to file
+        // write result to file
         writeToFile(data, (int) gridSize);
     }
 
     private static void computeFractal(int[] data, int x, int y, int size, int depth) {
-        if (depth == 0) {
+        // array to store the data of current process, leftmost, topmost coordinate, size of current section, fractal lvl
+
+        if (depth == 0) {   // base case
             return;
         }
 
-        int newSize = size / 3;
+        int newSize = size / 3;  // next subgrid size
 
-        // Ensure that the x and y indices are within the grid bounds
+        // ensure that the x and y indices are within the grid bounds
         if (x < 0 || y < 0 || x + size > (int) Math.pow(3, depth) || y + size > (int) Math.pow(3, depth)) {
             return;
         }
 
-        // Set the fractal pattern
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {                                             // go through current grid
             for (int j = 0; j < size; j++) {
-                if (isInFractal(i, j, size)) {
-                    data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 1;
+                if (isInFractal(i, j, size)) {                                       // call helper method
+                    data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 1;          // set to 1 (black)
                 } else {
-                    data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 0;
+                    data[(y + i) * (int) Math.pow(3, depth) + (x + j)] = 0;          // set to 0 (white)
                 }
             }
         }
 
-        if (newSize > 0) {
-            int newDepth = depth - 1;
-            for (int i = 0; i < 3; i++) {
+        if (newSize > 0) {                     // check new size
+            int newDepth = depth - 1;          // decrease depth
+            for (int i = 0; i < 3; i++) {      // iterate through sub-grids
                 for (int j = 0; j < 3; j++) {
                     if (i == 1 && j == 1) {
-                        continue;  // Center block is empty
+                        continue;  // center block is empty
                     }
                     computeFractal(data, x + i * newSize, y + j * newSize, newSize, newDepth);
-                }
+                } // recursive call to compute fractal for each sub-grid
             }
         }
     }
@@ -92,24 +89,25 @@ public class Sequential {
     private static boolean isInFractal(int x, int y, int size) {
         while (size > 0) {
             if ((x % 3 == 1) && (y % 3 == 1)) {
-                return false;  // Inside center block
+                return false;  // center block of current sub-grid
             }
-            x /= 3;
+            x /= 3;   // go to the next sub-grid
             y /= 3;
-            size /= 3;
+            size /= 3;    // decrease size
         }
-        return true;
+        return true;   // cell is in the fractal, if not center block
     }
 
+    // write result to file
     private static void writeToFile(int[] data, int gridSize) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
-            for (int i = 0; i < gridSize; i++) {
+            for (int i = 0; i < gridSize; i++) {                      // go through the result array
                 for (int j = 0; j < gridSize; j++) {
                     writer.write(data[i * gridSize + j] + " ");
                 }
                 writer.newLine();
             }
-        } catch (IOException e) {
+        } catch (IOException e) {  // handle exception
             e.printStackTrace();
         }
     }
